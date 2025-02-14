@@ -7,7 +7,7 @@ on:
         description: 'Select a branch from the last 10 branches'
         required: true
         type: choice
-        options: []  # Empty initially, we will populate it dynamically
+        options: []  # Initially empty, will be populated dynamically later
 
 jobs:
   checkout-commit:
@@ -31,23 +31,23 @@ jobs:
           
       - name: Request branch selection
         run: |
-          echo "Please manually select a branch and input it when prompted."
-          
+          echo "Please select one of the branches listed above and input it when prompted."
+
       - name: Checkout selected branch
         run: |
           echo "Checking out the selected branch: ${{ github.event.inputs.branch }}"
           git checkout ${{ github.event.inputs.branch }}
         
-      - name: Get last 20 commits from the selected branch
+      - name: Get last 10 commits from the selected branch
         run: |
-          echo "Getting last 20 commits for branch ${{ github.event.inputs.branch }}"
-          commits=$(git log -n 20 --pretty=format:"%H")
+          echo "Getting last 10 commits for branch ${{ github.event.inputs.branch }}"
+          commits=$(git log -n 10 --pretty=format:"%H %s")
           echo "commits=$commits" >> $GITHUB_ENV
           echo "Commits fetched: $commits"
           
       - name: Request commit selection
         run: |
-          echo "Please manually select a commit from the above list and input it when prompted."
+          echo "Please select one of the commits from the above list and input it when prompted."
 
       - name: Checkout to selected commit
         run: |
