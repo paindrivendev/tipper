@@ -1,19 +1,13 @@
-name: Checkout and Pull Commits
+name: Select Branch and Commit
 
 on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Select a branch from the last 5 branches'
+        description: 'Select a branch from the last 10 branches'
         required: true
         type: choice
-        options:
-          # Placeholder options for now, will be populated dynamically
-          - branch-1
-          - branch-2
-          - branch-3
-          - branch-4
-          - branch-5
+        options: []  # Empty initially, we will populate it dynamically
 
 jobs:
   checkout-commit:
@@ -22,26 +16,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Fetch last 5 branches
+      - name: Fetch last 10 branches
         id: fetch_branches
         run: |
-          echo "Fetching last 5 branches"
-          branches=$(git branch -r --sort=-committerdate | head -n 5)
+          # Fetch the last 10 branches
+          branches=$(git for-each-ref --sort=-committerdate refs/heads/ --count=10 --format '%(refname:short)')
+          echo "Branches fetched: $branches"
           echo "branches=$branches" >> $GITHUB_ENV
 
-      - name: Checkout to selected branch
+      - name: Display available branches
         run: |
-          echo "Checking out to the selected branch: ${{ github.event.inputs.branch }}"
-          git checkout ${{ github.event.inputs.branch }}
+          echo "Available branches:"
+          echo "$branches"
           
-      - name: Get last 20 commits
+      - name: Request branch selection
         run: |
-          echo "Getting last 20 commits for the selected branch"
+          echo "Please manually select a branch and input it when prompted."
+          
+      - name: Checkout selected branch
+        run: |
+          echo "Checking out the selected branch: ${{ github.event.inputs.branch }}"
+          git checkout ${{ github.event.inputs.branch }}
+        
+      - name: Get last 20 commits from the selected branch
+        run: |
+          echo "Getting last 20 commits for branch ${{ github.event.inputs.branch }}"
           commits=$(git log -n 20 --pretty=format:"%H")
           echo "commits=$commits" >> $GITHUB_ENV
-
-      - name: Checkout to the latest commit
+          echo "Commits fetched: $commits"
+          
+      - name: Request commit selection
         run: |
-          echo "Checking out to the latest commit: ${commits}"
-          git checkout ${commits[0]} # First commit in the list
+          echo "Please manually select a commit from the above list and input it when prompted."
 
+      - name: Checkout to selected commit
+        run: |
+          selected_commit="${{ github.event.inputs.commit }}"
+          echo "Checking out to commit: $selected_commit"
+          git checkout $selected_commit
