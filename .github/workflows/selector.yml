@@ -1,0 +1,39 @@
+name: Branch and Commit Selector
+
+on:
+  workflow_dispatch:
+
+jobs:
+  select-and-print:
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.get-branches.outputs.list }}
+      commits: ${{ steps.get-commits.outputs.list }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get branches
+        id: get-branches
+        run: |
+          BRANCHES=$(git branch -r | sed 's/origin\///' | grep -v 'HEAD ->' | jq -R -s -c 'split("\n")[:-1]')
+          echo "list=$BRANCHES" >> $GITHUB_OUTPUT
+          echo "Available branches: $BRANCHES"
+
+      - name: Get commits
+        id: get-commits
+        if: github.event.inputs.branch != ''
+        run: |
+          COMMITS=$(git log --format="%H %s" -n 10 ${{ github.event.inputs.branch }} | jq -R -s -c 'split("\n")[:-1]')
+          echo "list=$COMMITS" >> $GITHUB_OUTPUT
+          echo "Available commits: $COMMITS"
+
+      - name: Print selection
+        run: |
+          echo "Available branches:"
+          git branch -r | sed 's/origin\///'
+          echo "-----------------"
+          echo "Latest commits:"
+          git log --format="%H %s" -n 10
