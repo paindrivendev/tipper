@@ -3,19 +3,24 @@ name: Checkout Specific Commit
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Select the branch to run the workflow'
-        required: true
       commit_sha:
         description: 'Commit SHA to checkout'
         required: true
         type: string
 
-
 jobs:
-  checkout:
+  validate-and-checkout:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate branch name
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          if [[ ! $BRANCH =~ ^release/.+ ]]; then
+            echo "Error: Branch '$BRANCH' is not a release branch. Only release/* branches are allowed."
+            exit 1
+          fi
+          echo "Branch validation passed: $BRANCH"
+
       - name: Checkout specific commit
         uses: actions/checkout@v4
         with:
