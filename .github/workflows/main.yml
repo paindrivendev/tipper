@@ -1,0 +1,47 @@
+name: Checkout and Pull Commits
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Select a branch from the last 5 branches'
+        required: true
+        type: choice
+        options:
+          # Placeholder options for now, will be populated dynamically
+          - branch-1
+          - branch-2
+          - branch-3
+          - branch-4
+          - branch-5
+
+jobs:
+  checkout-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Fetch last 5 branches
+        id: fetch_branches
+        run: |
+          echo "Fetching last 5 branches"
+          branches=$(git branch -r --sort=-committerdate | head -n 5)
+          echo "branches=$branches" >> $GITHUB_ENV
+
+      - name: Checkout to selected branch
+        run: |
+          echo "Checking out to the selected branch: ${{ github.event.inputs.branch }}"
+          git checkout ${{ github.event.inputs.branch }}
+          
+      - name: Get last 20 commits
+        run: |
+          echo "Getting last 20 commits for the selected branch"
+          commits=$(git log -n 20 --pretty=format:"%H")
+          echo "commits=$commits" >> $GITHUB_ENV
+
+      - name: Checkout to the latest commit
+        run: |
+          echo "Checking out to the latest commit: ${commits}"
+          git checkout ${commits[0]} # First commit in the list
+
