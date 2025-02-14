@@ -1,0 +1,130 @@
+name: Branch and Commit Selection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  interactive-selection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get release branches
+        id: get-branches
+        run: |
+          # Get last 10 release branches
+          BRANCHES=$(git branch -r | grep 'origin/release/' | sed 's/origin\///' | sort -r | head -n 10)
+          echo "branches<<EOF" >> $GITHUB_OUTPUT
+          echo "$BRANCHES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create branch selection comment
+        uses: peter-evans/create-or-update-comment@v3
+        id: branch-comment
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ## Available Release Branches
+            Please select a branch by clicking on the reaction:
+            
+            $(for i in {1..10}; do
+              branch=$(echo "${{ steps.get-branches.outputs.branches }}" | sed -n "${i}p")
+              if [ ! -z "$branch" ]; then
+                echo "$i. $branch"
+              fi
+            done)
+            
+            1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟
+
+      - name: Wait for branch selection
+        uses: peter-evans/wait-for-reaction@v2
+        id: wait-branch
+        with:
+          comment-id: ${{ steps.branch-comment.outputs.comment-id }}
+          reactions: '1️⃣,2️⃣,3️⃣,4️⃣,5️⃣,6️⃣,7️⃣,8️⃣,9️⃣,🔟'
+
+      - name: Get selected branch
+        id: selected-branch
+        run: |
+          REACTION='${{ steps.wait-branch.outputs.reaction }}'
+          case $REACTION in
+            "1️⃣") NUM=1 ;;
+            "2️⃣") NUM=2 ;;
+            "3️⃣") NUM=3 ;;
+            "4️⃣") NUM=4 ;;
+            "5️⃣") NUM=5 ;;
+            "6️⃣") NUM=6 ;;
+            "7️⃣") NUM=7 ;;
+            "8️⃣") NUM=8 ;;
+            "9️⃣") NUM=9 ;;
+            "🔟") NUM=10 ;;
+          esac
+          BRANCH=$(echo "${{ steps.get-branches.outputs.branches }}" | sed -n "${NUM}p")
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Get commits for selected branch
+        id: get-commits
+        run: |
+          COMMITS=$(git log ${{ steps.selected-branch.outputs.branch }} --oneline -n 10)
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create commit selection comment
+        uses: peter-evans/create-or-update-comment@v3
+        id: commit-comment
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ## Commits from ${{ steps.selected-branch.outputs.branch }}
+            Please select a commit by clicking on the reaction:
+            
+            $(for i in {1..10}; do
+              commit=$(echo "${{ steps.get-commits.outputs.commits }}" | sed -n "${i}p")
+              if [ ! -z "$commit" ]; then
+                echo "$i. $commit"
+              fi
+            done)
+            
+            1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟
+
+      - name: Wait for commit selection
+        uses: peter-evans/wait-for-reaction@v2
+        id: wait-commit
+        with:
+          comment-id: ${{ steps.commit-comment.outputs.comment-id }}
+          reactions: '1️⃣,2️⃣,3️⃣,4️⃣,5️⃣,6️⃣,7️⃣,8️⃣,9️⃣,🔟'
+
+      - name: Get selected commit
+        id: selected-commit
+        run: |
+          REACTION='${{ steps.wait-commit.outputs.reaction }}'
+          case $REACTION in
+            "1️⃣") NUM=1 ;;
+            "2️⃣") NUM=2 ;;
+            "3️⃣") NUM=3 ;;
+            "4️⃣") NUM=4 ;;
+            "5️⃣") NUM=5 ;;
+            "6️⃣") NUM=6 ;;
+            "7️⃣") NUM=7 ;;
+            "8️⃣") NUM=8 ;;
+            "9️⃣") NUM=9 ;;
+            "🔟") NUM=10 ;;
+          esac
+          COMMIT=$(echo "${{ steps.get-commits.outputs.commits }}" | sed -n "${NUM}p" | cut -d' ' -f1)
+          echo "sha=$COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Checkout selected commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.selected-commit.outputs.sha }}
+
+      - name: Confirm selection
+        run: |
+          echo "Successfully checked out:"
+          echo "Branch: ${{ steps.selected-branch.outputs.branch }}"
+          echo "Commit: ${{ steps.selected-commit.outputs.sha }}"
+          echo "Commit message: $(git log -1 --pretty=%B)"
