@@ -2,14 +2,15 @@ name: Checkout Specific Commit
 
 on:
   workflow_dispatch:
-    # Only allow these branches to be selected in "Use workflow from"
-    branches:
-      - 'release/*'
     inputs:
+      branch:
+        description: 'Select the branch to run the workflow'
+        required: true
       commit_sha:
         description: 'Commit SHA to checkout'
         required: true
         type: string
+
 
 jobs:
   checkout:
