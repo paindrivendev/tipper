@@ -1,18 +1,7 @@
-name: Select Branch and Commit
+name: Fetch Last 10 Branches
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Select a branch from the last 10 branches'
-        required: true
-        type: choice
-        options: []  # Empty initially, will be populated dynamically
-      commit:
-        description: 'Select a commit from the selected branch'
-        required: true
-        type: choice
-        options: []  # Empty initially, will be populated dynamically
+  workflow_dispatch: {}
 
 jobs:
   fetch-branches:
@@ -37,35 +26,14 @@ jobs:
 
       - name: Request branch selection
         run: |
-          echo "Manually select one of the branches listed above and input it in the next step."
-
-  fetch-commits:
-    runs-on: ubuntu-latest
-    needs: fetch-branches
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Fetch last 10 commits from selected branch
-        id: fetch_commits
+          echo "Manually select a branch from the list above."
+          
+      - name: Output the selected branch
+        id: output_branch
         run: |
-          echo "Fetching last 10 commits for branch ${{ github.event.inputs.branch }}"
-          commits=$(git log -n 10 --pretty=format:"%H %s")
-          echo "commits=$commits" >> $GITHUB_ENV
-          echo "Commits fetched: $commits"
+          echo "selected_branch=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
 
-      - name: Display available commits
+      - name: Trigger the second workflow to fetch commits
         run: |
-          echo "Available commits for branch ${{ github.event.inputs.branch }}:"
-          echo "$commits"
-          echo "Please select one of the commits above."
-
-      - name: Request commit selection
-        run: |
-          echo "Manually select a commit from the list above and input it in the next step."
-
-      - name: Checkout to selected commit
-        run: |
-          selected_commit="${{ github.event.inputs.commit }}"
-          echo "Checking out to commit: $selected_commit"
-          git checkout $selected_commit
+          echo "Triggering the second workflow with the selected branch"
+          gh workflow run 'select-commit.yml' --ref main --inputs branch="${{ github.event.inputs.branch }}"
